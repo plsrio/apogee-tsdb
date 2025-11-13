@@ -21,10 +21,10 @@ type SnapshotsOhlc1h struct {
 	LastRecordTime         *time.Time
 	VolumeTotal            *float64
 	VolumeDelta            *int64
-	OpenInterestClose      *int64
-	OpenInterestHigh       *int64
-	OpenInterestLow        *int64
-	OpenInterestOpen       *int64
+	OpenInterestClose      *float64
+	OpenInterestHigh       *float64
+	OpenInterestLow        *float64
+	OpenInterestOpen       *float64
 	ImpliedVolatilityClose *float64
 	ImpliedVolatilityHigh  *float64
 	ImpliedVolatilityLow   *float64
@@ -41,6 +41,7 @@ type SnapshotsOhlc1h struct {
 	AskHigh                *float64
 	AskLow                 *float64
 	AskClose               *float64
+	DeltaOpen              *float64
 	DeltaHigh              *float64
 	DeltaLow               *float64
 	DeltaClose             *float64

@@ -28,7 +28,7 @@ type snapshotsTable struct {
 	UnderlyingPrice       postgres.ColumnFloat
 	UnderlyingLastUpdated postgres.ColumnTimestampz
 	Volume                postgres.ColumnInteger
-	OpenInterest          postgres.ColumnInteger
+	OpenInterest          postgres.ColumnFloat
 	Bid                   postgres.ColumnFloat
 	Ask                   postgres.ColumnFloat
 	BidSize               postgres.ColumnInteger
@@ -94,7 +94,7 @@ func newSnapshotsTableImpl(schemaName, tableName, alias string) snapshotsTable {
 		UnderlyingPriceColumn       = postgres.FloatColumn("underlying_price")
 		UnderlyingLastUpdatedColumn = postgres.TimestampzColumn("underlying_last_updated")
 		VolumeColumn                = postgres.IntegerColumn("volume")
-		OpenInterestColumn          = postgres.IntegerColumn("open_interest")
+		OpenInterestColumn          = postgres.FloatColumn("open_interest")
 		BidColumn                   = postgres.FloatColumn("bid")
 		AskColumn                   = postgres.FloatColumn("ask")
 		BidSizeColumn               = postgres.IntegerColumn("bid_size")

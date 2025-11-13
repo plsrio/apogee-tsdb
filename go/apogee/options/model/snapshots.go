@@ -23,7 +23,7 @@ type Snapshots struct {
 	UnderlyingPrice       *float64
 	UnderlyingLastUpdated *time.Time
 	Volume                *int64
-	OpenInterest          *int64
+	OpenInterest          *float64
 	Bid                   *float64
 	Ask                   *float64
 	BidSize               *int32

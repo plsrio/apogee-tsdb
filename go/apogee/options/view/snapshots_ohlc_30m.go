@@ -26,10 +26,10 @@ type snapshotsOhlc30mTable struct {
 	LastRecordTime         postgres.ColumnTimestampz
 	VolumeTotal            postgres.ColumnFloat
 	VolumeDelta            postgres.ColumnInteger
-	OpenInterestClose      postgres.ColumnInteger
-	OpenInterestHigh       postgres.ColumnInteger
-	OpenInterestLow        postgres.ColumnInteger
-	OpenInterestOpen       postgres.ColumnInteger
+	OpenInterestClose      postgres.ColumnFloat
+	OpenInterestHigh       postgres.ColumnFloat
+	OpenInterestLow        postgres.ColumnFloat
+	OpenInterestOpen       postgres.ColumnFloat
 	ImpliedVolatilityClose postgres.ColumnFloat
 	ImpliedVolatilityHigh  postgres.ColumnFloat
 	ImpliedVolatilityLow   postgres.ColumnFloat
@@ -112,10 +112,10 @@ func newSnapshotsOhlc30mTableImpl(schemaName, tableName, alias string) snapshots
 		LastRecordTimeColumn         = postgres.TimestampzColumn("last_record_time")
 		VolumeTotalColumn            = postgres.FloatColumn("volume_total")
 		VolumeDeltaColumn            = postgres.IntegerColumn("volume_delta")
-		OpenInterestCloseColumn      = postgres.IntegerColumn("open_interest_close")
-		OpenInterestHighColumn       = postgres.IntegerColumn("open_interest_high")
-		OpenInterestLowColumn        = postgres.IntegerColumn("open_interest_low")
-		OpenInterestOpenColumn       = postgres.IntegerColumn("open_interest_open")
+		OpenInterestCloseColumn      = postgres.FloatColumn("open_interest_close")
+		OpenInterestHighColumn       = postgres.FloatColumn("open_interest_high")
+		OpenInterestLowColumn        = postgres.FloatColumn("open_interest_low")
+		OpenInterestOpenColumn       = postgres.FloatColumn("open_interest_open")
 		ImpliedVolatilityCloseColumn = postgres.FloatColumn("implied_volatility_close")
 		ImpliedVolatilityHighColumn  = postgres.FloatColumn("implied_volatility_high")
 		ImpliedVolatilityLowColumn   = postgres.FloatColumn("implied_volatility_low")

@@ -4,11 +4,11 @@ CREATE EXTENSION IF NOT EXISTS timescaledb;
 CREATE SCHEMA IF NOT EXISTS options;
 
 -- Create enum types for option attributes
-CREATE TYPE option_type AS ENUM ('call', 'put');
-CREATE TYPE option_style AS ENUM ('american', 'european');
-CREATE TYPE option_exercise AS ENUM ('long', 'short');
-CREATE TYPE option_position AS ENUM ('buy', 'sell');
-CREATE TYPE option_moneyness AS ENUM ('ITM', 'ATM', 'OTM');
+CREATE TYPE options.option_type AS ENUM ('call', 'put');
+CREATE TYPE options.option_style AS ENUM ('american', 'european');
+CREATE TYPE options.option_exercise AS ENUM ('long', 'short');
+CREATE TYPE options.option_position AS ENUM ('buy', 'sell');
+CREATE TYPE options.option_moneyness AS ENUM ('ITM', 'ATM', 'OTM');
 
 -- Main options snapshots table
 CREATE TABLE options.snapshots (
@@ -18,15 +18,15 @@ CREATE TABLE options.snapshots (
   strike_price DECIMAL(12, 4) NOT NULL,
   shares_per_contract INTEGER NOT NULL,
   expiration_date DATE NOT NULL,
-  option_type option_type NOT NULL,
-  option_style option_style DEFAULT 'american',
+  option_type options.option_type NOT NULL,
+  option_style options.option_style DEFAULT 'american',
   -- Underlying info
   underlying TEXT NOT NULL,
   underlying_price DECIMAL(12, 4),
   underlying_last_updated TIMESTAMP WITH TIME ZONE DEFAULT NULL,
   -- Volume and interest
   volume BIGINT,
-  open_interest BIGINT,
+  open_interest DECIMAL(12, 4),
   -- Bid/Ask
   bid DECIMAL(12, 4),
   ask DECIMAL(12, 4),
