@@ -19,8 +19,8 @@ type SnapshotsOhlc1h struct {
 	OptionType             *OptionType
 	FirstRecordTime        *time.Time
 	LastRecordTime         *time.Time
-	VolumeTotal            *float64
-	VolumeDelta            *int64
+	MoneynessOpen          *OptionMoneyness
+	MoneynessClose         *OptionMoneyness
 	OpenInterestClose      *float64
 	OpenInterestHigh       *float64
 	OpenInterestLow        *float64
@@ -33,6 +33,10 @@ type SnapshotsOhlc1h struct {
 	UnderlyingHigh         *float64
 	UnderlyingLow          *float64
 	UnderlyingClose        *float64
+	MidOpen                *float64
+	MidHigh                *float64
+	MidLow                 *float64
+	MidClose               *float64
 	BidOpen                *float64
 	BidHigh                *float64
 	BidLow                 *float64

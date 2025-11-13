@@ -1,0 +1,19 @@
+[tasks.setup_db]
+run = """
+docker run -d --name temptimescaledb -p 5432:5432 -e POSTGRES_PASSWORD=postgres timescale/timescaledb-ha:pg17;
+# wait for the DB to be ready
+until psql -d 'postgres://postgres:postgres@localhost' -c '\\l'; do
+  echo 'Waiting for database to be ready...'
+  sleep 2
+done
+psql -d 'postgres://postgres:postgres@localhost' -c 'CREATE DATABASE apogee;';
+psql -d 'postgres://postgres:postgres@localhost/apogee' -a -f options/sql/snapshots_schema_v1.sql;
+"""
+
+[tasks.teardown_db]
+run = "docker stop temptimescaledb && docker rm temptimescaledb"
+
+[tasks.gogen]
+depends = ["setup_db"]
+depends_post = ["teardown_db"]
+run = "jet -dsn='postgresql://postgres:postgres@localhost:5432/apogee?sslmode=disable' -path=./go -schema=options"

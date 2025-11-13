@@ -6,8 +6,8 @@ CREATE SCHEMA IF NOT EXISTS options;
 -- Create enum types for option attributes
 CREATE TYPE options.option_type AS ENUM ('call', 'put');
 CREATE TYPE options.option_style AS ENUM ('american', 'european');
-CREATE TYPE options.option_exercise AS ENUM ('long', 'short');
-CREATE TYPE options.option_position AS ENUM ('buy', 'sell');
+-- CREATE TYPE options.option_exercise AS ENUM ('long', 'short');
+-- CREATE TYPE options.option_position AS ENUM ('buy', 'sell');
 CREATE TYPE options.option_moneyness AS ENUM ('ITM', 'ATM', 'OTM');
 
 -- Main options snapshots table
@@ -22,21 +22,23 @@ CREATE TABLE options.snapshots (
   option_style options.option_style DEFAULT 'american',
   -- Underlying info
   underlying TEXT NOT NULL,
-  underlying_price DECIMAL(12, 4),
+  underlying_price DECIMAL(12, 4) NOT NULL,
   underlying_last_updated TIMESTAMP WITH TIME ZONE DEFAULT NULL,
-  -- Volume and interest
-  volume BIGINT,
+  -- open interest
   open_interest DECIMAL(12, 4),
   -- Bid/Ask
-  bid DECIMAL(12, 4),
-  ask DECIMAL(12, 4),
-  bid_size INTEGER,
-  ask_size INTEGER,
+  bid DECIMAL(12, 4) NOT NULL,
+  ask DECIMAL(12, 4) NOT NULL,
+  mid DECIMAL(12, 4) NOT NULL,
+  bid_size DECIMAL(12, 4) NOT NULL,
+  ask_size DECIMAL(12, 4) NOT NULL,
+  -- moneyness
+  moneyness options.option_moneyness DEFAULT NULL,
   -- Greeks
-  delta DECIMAL(10, 6),
-  gamma DECIMAL(10, 6),
-  theta DECIMAL(10, 6),
-  vega DECIMAL(10, 6),
+  delta DECIMAL(10, 6) NOT NULL,
+  gamma DECIMAL(10, 6) NOT NULL,
+  theta DECIMAL(10, 6) NOT NULL,
+  vega DECIMAL(10, 6) NOT NULL,
   rho DECIMAL(10, 6) DEFAULT NULL,
   -- Implied volatility
   implied_volatility DECIMAL(10, 6),
@@ -120,15 +122,9 @@ SELECT time_bucket('30 minutes', time) AS bucket,
   option_type,
   MIN(time) AS first_record_time,
   MAX(time) AS last_record_time,
-  -- volume
-  SUM(volume) AS volume_total,
-  -- volume delta
-  (
-    CASE
-      WHEN FIRST(volume, time) IS NULL THEN NULL
-      ELSE LAST(volume, time) - FIRST(volume, time)
-    END
-  ) AS volume_delta,
+  -- moneyness open / close
+  FIRST(moneyness, time) AS moneyness_open,
+  LAST(moneyness, time) AS moneyness_close,
   -- open interest
   LAST(open_interest, time) AS open_interest_close,
   MAX(open_interest) AS open_interest_high,
@@ -144,6 +140,11 @@ SELECT time_bucket('30 minutes', time) AS bucket,
   MAX(underlying_price) AS underlying_high,
   MIN(underlying_price) AS underlying_low,
   LAST(underlying_price, time) AS underlying_close,
+  -- mid ohlc
+  FIRST(mid, time) AS mid_open,
+  MAX(mid) AS mid_high,
+  MIN(mid) AS mid_low,
+  LAST(mid, time) AS mid_close,
   -- bid OHLC
   FIRST(bid, time) AS bid_open,
   MAX(bid) AS bid_high,
@@ -197,15 +198,9 @@ SELECT time_bucket('1 hour', time) AS bucket,
   option_type,
   MIN(time) AS first_record_time,
   MAX(time) AS last_record_time,
-  -- volume
-  SUM(volume) AS volume_total,
-  -- volume delta
-  (
-    CASE
-      WHEN FIRST(volume, time) IS NULL THEN NULL
-      ELSE LAST(volume, time) - FIRST(volume, time)
-    END
-  ) AS volume_delta,
+  -- moneyness open / close
+  FIRST(moneyness, time) AS moneyness_open,
+  LAST(moneyness, time) AS moneyness_close,
   -- open interest
   LAST(open_interest, time) AS open_interest_close,
   MAX(open_interest) AS open_interest_high,
@@ -221,6 +216,11 @@ SELECT time_bucket('1 hour', time) AS bucket,
   MAX(underlying_price) AS underlying_high,
   MIN(underlying_price) AS underlying_low,
   LAST(underlying_price, time) AS underlying_close,
+  -- mid ohlc
+  FIRST(mid, time) AS mid_open,
+  MAX(mid) AS mid_high,
+  MIN(mid) AS mid_low,
+  LAST(mid, time) AS mid_close,
   -- bid OHLC
   FIRST(bid, time) AS bid_open,
   MAX(bid) AS bid_high,

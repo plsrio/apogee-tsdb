@@ -27,12 +27,13 @@ type snapshotsTable struct {
 	Underlying            postgres.ColumnString
 	UnderlyingPrice       postgres.ColumnFloat
 	UnderlyingLastUpdated postgres.ColumnTimestampz
-	Volume                postgres.ColumnInteger
 	OpenInterest          postgres.ColumnFloat
 	Bid                   postgres.ColumnFloat
 	Ask                   postgres.ColumnFloat
-	BidSize               postgres.ColumnInteger
-	AskSize               postgres.ColumnInteger
+	Mid                   postgres.ColumnFloat
+	BidSize               postgres.ColumnFloat
+	AskSize               postgres.ColumnFloat
+	Moneyness             postgres.ColumnString
 	Delta                 postgres.ColumnFloat
 	Gamma                 postgres.ColumnFloat
 	Theta                 postgres.ColumnFloat
@@ -93,12 +94,13 @@ func newSnapshotsTableImpl(schemaName, tableName, alias string) snapshotsTable {
 		UnderlyingColumn            = postgres.StringColumn("underlying")
 		UnderlyingPriceColumn       = postgres.FloatColumn("underlying_price")
 		UnderlyingLastUpdatedColumn = postgres.TimestampzColumn("underlying_last_updated")
-		VolumeColumn                = postgres.IntegerColumn("volume")
 		OpenInterestColumn          = postgres.FloatColumn("open_interest")
 		BidColumn                   = postgres.FloatColumn("bid")
 		AskColumn                   = postgres.FloatColumn("ask")
-		BidSizeColumn               = postgres.IntegerColumn("bid_size")
-		AskSizeColumn               = postgres.IntegerColumn("ask_size")
+		MidColumn                   = postgres.FloatColumn("mid")
+		BidSizeColumn               = postgres.FloatColumn("bid_size")
+		AskSizeColumn               = postgres.FloatColumn("ask_size")
+		MoneynessColumn             = postgres.StringColumn("moneyness")
 		DeltaColumn                 = postgres.FloatColumn("delta")
 		GammaColumn                 = postgres.FloatColumn("gamma")
 		ThetaColumn                 = postgres.FloatColumn("theta")
@@ -108,8 +110,8 @@ func newSnapshotsTableImpl(schemaName, tableName, alias string) snapshotsTable {
 		LastUpdatedSrcColumn        = postgres.TimestampzColumn("last_updated_src")
 		StartLoadTimeColumn         = postgres.TimestampzColumn("start_load_time")
 		EndLoadTimeColumn           = postgres.TimestampzColumn("end_load_time")
-		allColumns                  = postgres.ColumnList{TimeColumn, TickerColumn, StrikePriceColumn, SharesPerContractColumn, ExpirationDateColumn, OptionTypeColumn, OptionStyleColumn, UnderlyingColumn, UnderlyingPriceColumn, UnderlyingLastUpdatedColumn, VolumeColumn, OpenInterestColumn, BidColumn, AskColumn, BidSizeColumn, AskSizeColumn, DeltaColumn, GammaColumn, ThetaColumn, VegaColumn, RhoColumn, ImpliedVolatilityColumn, LastUpdatedSrcColumn, StartLoadTimeColumn, EndLoadTimeColumn}
-		mutableColumns              = postgres.ColumnList{SharesPerContractColumn, OptionStyleColumn, UnderlyingColumn, UnderlyingPriceColumn, UnderlyingLastUpdatedColumn, VolumeColumn, OpenInterestColumn, BidColumn, AskColumn, BidSizeColumn, AskSizeColumn, DeltaColumn, GammaColumn, ThetaColumn, VegaColumn, RhoColumn, ImpliedVolatilityColumn, LastUpdatedSrcColumn, StartLoadTimeColumn, EndLoadTimeColumn}
+		allColumns                  = postgres.ColumnList{TimeColumn, TickerColumn, StrikePriceColumn, SharesPerContractColumn, ExpirationDateColumn, OptionTypeColumn, OptionStyleColumn, UnderlyingColumn, UnderlyingPriceColumn, UnderlyingLastUpdatedColumn, OpenInterestColumn, BidColumn, AskColumn, MidColumn, BidSizeColumn, AskSizeColumn, MoneynessColumn, DeltaColumn, GammaColumn, ThetaColumn, VegaColumn, RhoColumn, ImpliedVolatilityColumn, LastUpdatedSrcColumn, StartLoadTimeColumn, EndLoadTimeColumn}
+		mutableColumns              = postgres.ColumnList{SharesPerContractColumn, OptionStyleColumn, UnderlyingColumn, UnderlyingPriceColumn, UnderlyingLastUpdatedColumn, OpenInterestColumn, BidColumn, AskColumn, MidColumn, BidSizeColumn, AskSizeColumn, MoneynessColumn, DeltaColumn, GammaColumn, ThetaColumn, VegaColumn, RhoColumn, ImpliedVolatilityColumn, LastUpdatedSrcColumn, StartLoadTimeColumn, EndLoadTimeColumn}
 		defaultColumns              = postgres.ColumnList{TimeColumn, OptionStyleColumn, RhoColumn}
 	)
 
@@ -127,12 +129,13 @@ func newSnapshotsTableImpl(schemaName, tableName, alias string) snapshotsTable {
 		Underlying:            UnderlyingColumn,
 		UnderlyingPrice:       UnderlyingPriceColumn,
 		UnderlyingLastUpdated: UnderlyingLastUpdatedColumn,
-		Volume:                VolumeColumn,
 		OpenInterest:          OpenInterestColumn,
 		Bid:                   BidColumn,
 		Ask:                   AskColumn,
+		Mid:                   MidColumn,
 		BidSize:               BidSizeColumn,
 		AskSize:               AskSizeColumn,
+		Moneyness:             MoneynessColumn,
 		Delta:                 DeltaColumn,
 		Gamma:                 GammaColumn,
 		Theta:                 ThetaColumn,

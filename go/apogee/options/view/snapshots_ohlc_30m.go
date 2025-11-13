@@ -24,8 +24,8 @@ type snapshotsOhlc30mTable struct {
 	OptionType             postgres.ColumnString
 	FirstRecordTime        postgres.ColumnTimestampz
 	LastRecordTime         postgres.ColumnTimestampz
-	VolumeTotal            postgres.ColumnFloat
-	VolumeDelta            postgres.ColumnInteger
+	MoneynessOpen          postgres.ColumnString
+	MoneynessClose         postgres.ColumnString
 	OpenInterestClose      postgres.ColumnFloat
 	OpenInterestHigh       postgres.ColumnFloat
 	OpenInterestLow        postgres.ColumnFloat
@@ -38,6 +38,10 @@ type snapshotsOhlc30mTable struct {
 	UnderlyingHigh         postgres.ColumnFloat
 	UnderlyingLow          postgres.ColumnFloat
 	UnderlyingClose        postgres.ColumnFloat
+	MidOpen                postgres.ColumnFloat
+	MidHigh                postgres.ColumnFloat
+	MidLow                 postgres.ColumnFloat
+	MidClose               postgres.ColumnFloat
 	BidOpen                postgres.ColumnFloat
 	BidHigh                postgres.ColumnFloat
 	BidLow                 postgres.ColumnFloat
@@ -110,8 +114,8 @@ func newSnapshotsOhlc30mTableImpl(schemaName, tableName, alias string) snapshots
 		OptionTypeColumn             = postgres.StringColumn("option_type")
 		FirstRecordTimeColumn        = postgres.TimestampzColumn("first_record_time")
 		LastRecordTimeColumn         = postgres.TimestampzColumn("last_record_time")
-		VolumeTotalColumn            = postgres.FloatColumn("volume_total")
-		VolumeDeltaColumn            = postgres.IntegerColumn("volume_delta")
+		MoneynessOpenColumn          = postgres.StringColumn("moneyness_open")
+		MoneynessCloseColumn         = postgres.StringColumn("moneyness_close")
 		OpenInterestCloseColumn      = postgres.FloatColumn("open_interest_close")
 		OpenInterestHighColumn       = postgres.FloatColumn("open_interest_high")
 		OpenInterestLowColumn        = postgres.FloatColumn("open_interest_low")
@@ -124,6 +128,10 @@ func newSnapshotsOhlc30mTableImpl(schemaName, tableName, alias string) snapshots
 		UnderlyingHighColumn         = postgres.FloatColumn("underlying_high")
 		UnderlyingLowColumn          = postgres.FloatColumn("underlying_low")
 		UnderlyingCloseColumn        = postgres.FloatColumn("underlying_close")
+		MidOpenColumn                = postgres.FloatColumn("mid_open")
+		MidHighColumn                = postgres.FloatColumn("mid_high")
+		MidLowColumn                 = postgres.FloatColumn("mid_low")
+		MidCloseColumn               = postgres.FloatColumn("mid_close")
 		BidOpenColumn                = postgres.FloatColumn("bid_open")
 		BidHighColumn                = postgres.FloatColumn("bid_high")
 		BidLowColumn                 = postgres.FloatColumn("bid_low")
@@ -148,8 +156,8 @@ func newSnapshotsOhlc30mTableImpl(schemaName, tableName, alias string) snapshots
 		VegaHighColumn               = postgres.FloatColumn("vega_high")
 		VegaLowColumn                = postgres.FloatColumn("vega_low")
 		VegaCloseColumn              = postgres.FloatColumn("vega_close")
-		allColumns                   = postgres.ColumnList{BucketColumn, TickerColumn, StrikePriceColumn, ExpirationDateColumn, OptionTypeColumn, FirstRecordTimeColumn, LastRecordTimeColumn, VolumeTotalColumn, VolumeDeltaColumn, OpenInterestCloseColumn, OpenInterestHighColumn, OpenInterestLowColumn, OpenInterestOpenColumn, ImpliedVolatilityCloseColumn, ImpliedVolatilityHighColumn, ImpliedVolatilityLowColumn, ImpliedVolatilityOpenColumn, UnderlyingOpenColumn, UnderlyingHighColumn, UnderlyingLowColumn, UnderlyingCloseColumn, BidOpenColumn, BidHighColumn, BidLowColumn, BidCloseColumn, AskOpenColumn, AskHighColumn, AskLowColumn, AskCloseColumn, DeltaOpenColumn, DeltaHighColumn, DeltaLowColumn, DeltaCloseColumn, GammaOpenColumn, GammaHighColumn, GammaLowColumn, GammaCloseColumn, ThetaOpenColumn, ThetaHighColumn, ThetaLowColumn, ThetaCloseColumn, VegaOpenColumn, VegaHighColumn, VegaLowColumn, VegaCloseColumn}
-		mutableColumns               = postgres.ColumnList{BucketColumn, TickerColumn, StrikePriceColumn, ExpirationDateColumn, OptionTypeColumn, FirstRecordTimeColumn, LastRecordTimeColumn, VolumeTotalColumn, VolumeDeltaColumn, OpenInterestCloseColumn, OpenInterestHighColumn, OpenInterestLowColumn, OpenInterestOpenColumn, ImpliedVolatilityCloseColumn, ImpliedVolatilityHighColumn, ImpliedVolatilityLowColumn, ImpliedVolatilityOpenColumn, UnderlyingOpenColumn, UnderlyingHighColumn, UnderlyingLowColumn, UnderlyingCloseColumn, BidOpenColumn, BidHighColumn, BidLowColumn, BidCloseColumn, AskOpenColumn, AskHighColumn, AskLowColumn, AskCloseColumn, DeltaOpenColumn, DeltaHighColumn, DeltaLowColumn, DeltaCloseColumn, GammaOpenColumn, GammaHighColumn, GammaLowColumn, GammaCloseColumn, ThetaOpenColumn, ThetaHighColumn, ThetaLowColumn, ThetaCloseColumn, VegaOpenColumn, VegaHighColumn, VegaLowColumn, VegaCloseColumn}
+		allColumns                   = postgres.ColumnList{BucketColumn, TickerColumn, StrikePriceColumn, ExpirationDateColumn, OptionTypeColumn, FirstRecordTimeColumn, LastRecordTimeColumn, MoneynessOpenColumn, MoneynessCloseColumn, OpenInterestCloseColumn, OpenInterestHighColumn, OpenInterestLowColumn, OpenInterestOpenColumn, ImpliedVolatilityCloseColumn, ImpliedVolatilityHighColumn, ImpliedVolatilityLowColumn, ImpliedVolatilityOpenColumn, UnderlyingOpenColumn, UnderlyingHighColumn, UnderlyingLowColumn, UnderlyingCloseColumn, MidOpenColumn, MidHighColumn, MidLowColumn, MidCloseColumn, BidOpenColumn, BidHighColumn, BidLowColumn, BidCloseColumn, AskOpenColumn, AskHighColumn, AskLowColumn, AskCloseColumn, DeltaOpenColumn, DeltaHighColumn, DeltaLowColumn, DeltaCloseColumn, GammaOpenColumn, GammaHighColumn, GammaLowColumn, GammaCloseColumn, ThetaOpenColumn, ThetaHighColumn, ThetaLowColumn, ThetaCloseColumn, VegaOpenColumn, VegaHighColumn, VegaLowColumn, VegaCloseColumn}
+		mutableColumns               = postgres.ColumnList{BucketColumn, TickerColumn, StrikePriceColumn, ExpirationDateColumn, OptionTypeColumn, FirstRecordTimeColumn, LastRecordTimeColumn, MoneynessOpenColumn, MoneynessCloseColumn, OpenInterestCloseColumn, OpenInterestHighColumn, OpenInterestLowColumn, OpenInterestOpenColumn, ImpliedVolatilityCloseColumn, ImpliedVolatilityHighColumn, ImpliedVolatilityLowColumn, ImpliedVolatilityOpenColumn, UnderlyingOpenColumn, UnderlyingHighColumn, UnderlyingLowColumn, UnderlyingCloseColumn, MidOpenColumn, MidHighColumn, MidLowColumn, MidCloseColumn, BidOpenColumn, BidHighColumn, BidLowColumn, BidCloseColumn, AskOpenColumn, AskHighColumn, AskLowColumn, AskCloseColumn, DeltaOpenColumn, DeltaHighColumn, DeltaLowColumn, DeltaCloseColumn, GammaOpenColumn, GammaHighColumn, GammaLowColumn, GammaCloseColumn, ThetaOpenColumn, ThetaHighColumn, ThetaLowColumn, ThetaCloseColumn, VegaOpenColumn, VegaHighColumn, VegaLowColumn, VegaCloseColumn}
 		defaultColumns               = postgres.ColumnList{}
 	)
 
@@ -164,8 +172,8 @@ func newSnapshotsOhlc30mTableImpl(schemaName, tableName, alias string) snapshots
 		OptionType:             OptionTypeColumn,
 		FirstRecordTime:        FirstRecordTimeColumn,
 		LastRecordTime:         LastRecordTimeColumn,
-		VolumeTotal:            VolumeTotalColumn,
-		VolumeDelta:            VolumeDeltaColumn,
+		MoneynessOpen:          MoneynessOpenColumn,
+		MoneynessClose:         MoneynessCloseColumn,
 		OpenInterestClose:      OpenInterestCloseColumn,
 		OpenInterestHigh:       OpenInterestHighColumn,
 		OpenInterestLow:        OpenInterestLowColumn,
@@ -178,6 +186,10 @@ func newSnapshotsOhlc30mTableImpl(schemaName, tableName, alias string) snapshots
 		UnderlyingHigh:         UnderlyingHighColumn,
 		UnderlyingLow:          UnderlyingLowColumn,
 		UnderlyingClose:        UnderlyingCloseColumn,
+		MidOpen:                MidOpenColumn,
+		MidHigh:                MidHighColumn,
+		MidLow:                 MidLowColumn,
+		MidClose:               MidCloseColumn,
 		BidOpen:                BidOpenColumn,
 		BidHigh:                BidHighColumn,
 		BidLow:                 BidLowColumn,

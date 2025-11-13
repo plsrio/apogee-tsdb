@@ -20,18 +20,19 @@ type Snapshots struct {
 	OptionType            OptionType `sql:"primary_key"`
 	OptionStyle           *OptionStyle
 	Underlying            string
-	UnderlyingPrice       *float64
+	UnderlyingPrice       float64
 	UnderlyingLastUpdated *time.Time
-	Volume                *int64
 	OpenInterest          *float64
-	Bid                   *float64
-	Ask                   *float64
-	BidSize               *int32
-	AskSize               *int32
-	Delta                 *float64
-	Gamma                 *float64
-	Theta                 *float64
-	Vega                  *float64
+	Bid                   float64
+	Ask                   float64
+	Mid                   float64
+	BidSize               float64
+	AskSize               float64
+	Moneyness             *OptionMoneyness
+	Delta                 float64
+	Gamma                 float64
+	Theta                 float64
+	Vega                  float64
 	Rho                   *float64
 	ImpliedVolatility     *float64
 	LastUpdatedSrc        *time.Time
