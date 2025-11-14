@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-type SnapshotsOhlc30m struct {
+type SnapshotsOhlcDailyDetailed struct {
 	Bucket                 *time.Time
 	Ticker                 *string
 	Underlying             *string
@@ -62,4 +62,6 @@ type SnapshotsOhlc30m struct {
 	VegaHigh               *float64
 	VegaLow                *float64
 	VegaClose              *float64
+	SharesPerContract      *int32
+	ExerciseStyle          *ExerciseStyle
 }

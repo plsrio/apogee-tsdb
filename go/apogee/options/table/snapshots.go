@@ -17,22 +17,22 @@ type snapshotsTable struct {
 	postgres.Table
 
 	// Columns
-	Time                  postgres.ColumnTimestampz
+	Timestamp             postgres.ColumnTimestampz
 	Ticker                postgres.ColumnString
-	StrikePrice           postgres.ColumnFloat
-	SharesPerContract     postgres.ColumnInteger
-	ExpirationDate        postgres.ColumnDate
-	OptionType            postgres.ColumnString
-	OptionStyle           postgres.ColumnString
 	Underlying            postgres.ColumnString
+	StrikePrice           postgres.ColumnFloat
+	ExpirationDate        postgres.ColumnTimestampz
+	OptionType            postgres.ColumnString
+	DataSrc               postgres.ColumnString
 	UnderlyingPrice       postgres.ColumnFloat
 	UnderlyingLastUpdated postgres.ColumnTimestampz
 	OpenInterest          postgres.ColumnFloat
 	Bid                   postgres.ColumnFloat
 	Ask                   postgres.ColumnFloat
-	Mid                   postgres.ColumnFloat
+	Midpoint              postgres.ColumnFloat
 	BidSize               postgres.ColumnFloat
 	AskSize               postgres.ColumnFloat
+	IntrinsicValue        postgres.ColumnFloat
 	Moneyness             postgres.ColumnString
 	Delta                 postgres.ColumnFloat
 	Gamma                 postgres.ColumnFloat
@@ -84,22 +84,22 @@ func newSnapshotsTable(schemaName, tableName, alias string) *SnapshotsTable {
 
 func newSnapshotsTableImpl(schemaName, tableName, alias string) snapshotsTable {
 	var (
-		TimeColumn                  = postgres.TimestampzColumn("time")
+		TimestampColumn             = postgres.TimestampzColumn("timestamp")
 		TickerColumn                = postgres.StringColumn("ticker")
-		StrikePriceColumn           = postgres.FloatColumn("strike_price")
-		SharesPerContractColumn     = postgres.IntegerColumn("shares_per_contract")
-		ExpirationDateColumn        = postgres.DateColumn("expiration_date")
-		OptionTypeColumn            = postgres.StringColumn("option_type")
-		OptionStyleColumn           = postgres.StringColumn("option_style")
 		UnderlyingColumn            = postgres.StringColumn("underlying")
+		StrikePriceColumn           = postgres.FloatColumn("strike_price")
+		ExpirationDateColumn        = postgres.TimestampzColumn("expiration_date")
+		OptionTypeColumn            = postgres.StringColumn("option_type")
+		DataSrcColumn               = postgres.StringColumn("data_src")
 		UnderlyingPriceColumn       = postgres.FloatColumn("underlying_price")
 		UnderlyingLastUpdatedColumn = postgres.TimestampzColumn("underlying_last_updated")
 		OpenInterestColumn          = postgres.FloatColumn("open_interest")
 		BidColumn                   = postgres.FloatColumn("bid")
 		AskColumn                   = postgres.FloatColumn("ask")
-		MidColumn                   = postgres.FloatColumn("mid")
+		MidpointColumn              = postgres.FloatColumn("midpoint")
 		BidSizeColumn               = postgres.FloatColumn("bid_size")
 		AskSizeColumn               = postgres.FloatColumn("ask_size")
+		IntrinsicValueColumn        = postgres.FloatColumn("intrinsic_value")
 		MoneynessColumn             = postgres.StringColumn("moneyness")
 		DeltaColumn                 = postgres.FloatColumn("delta")
 		GammaColumn                 = postgres.FloatColumn("gamma")
@@ -110,31 +110,31 @@ func newSnapshotsTableImpl(schemaName, tableName, alias string) snapshotsTable {
 		LastUpdatedSrcColumn        = postgres.TimestampzColumn("last_updated_src")
 		StartLoadTimeColumn         = postgres.TimestampzColumn("start_load_time")
 		EndLoadTimeColumn           = postgres.TimestampzColumn("end_load_time")
-		allColumns                  = postgres.ColumnList{TimeColumn, TickerColumn, StrikePriceColumn, SharesPerContractColumn, ExpirationDateColumn, OptionTypeColumn, OptionStyleColumn, UnderlyingColumn, UnderlyingPriceColumn, UnderlyingLastUpdatedColumn, OpenInterestColumn, BidColumn, AskColumn, MidColumn, BidSizeColumn, AskSizeColumn, MoneynessColumn, DeltaColumn, GammaColumn, ThetaColumn, VegaColumn, RhoColumn, ImpliedVolatilityColumn, LastUpdatedSrcColumn, StartLoadTimeColumn, EndLoadTimeColumn}
-		mutableColumns              = postgres.ColumnList{SharesPerContractColumn, OptionStyleColumn, UnderlyingColumn, UnderlyingPriceColumn, UnderlyingLastUpdatedColumn, OpenInterestColumn, BidColumn, AskColumn, MidColumn, BidSizeColumn, AskSizeColumn, MoneynessColumn, DeltaColumn, GammaColumn, ThetaColumn, VegaColumn, RhoColumn, ImpliedVolatilityColumn, LastUpdatedSrcColumn, StartLoadTimeColumn, EndLoadTimeColumn}
-		defaultColumns              = postgres.ColumnList{TimeColumn, OptionStyleColumn, RhoColumn}
+		allColumns                  = postgres.ColumnList{TimestampColumn, TickerColumn, UnderlyingColumn, StrikePriceColumn, ExpirationDateColumn, OptionTypeColumn, DataSrcColumn, UnderlyingPriceColumn, UnderlyingLastUpdatedColumn, OpenInterestColumn, BidColumn, AskColumn, MidpointColumn, BidSizeColumn, AskSizeColumn, IntrinsicValueColumn, MoneynessColumn, DeltaColumn, GammaColumn, ThetaColumn, VegaColumn, RhoColumn, ImpliedVolatilityColumn, LastUpdatedSrcColumn, StartLoadTimeColumn, EndLoadTimeColumn}
+		mutableColumns              = postgres.ColumnList{UnderlyingColumn, StrikePriceColumn, ExpirationDateColumn, OptionTypeColumn, DataSrcColumn, UnderlyingPriceColumn, UnderlyingLastUpdatedColumn, OpenInterestColumn, BidColumn, AskColumn, BidSizeColumn, AskSizeColumn, DeltaColumn, GammaColumn, ThetaColumn, VegaColumn, RhoColumn, ImpliedVolatilityColumn, LastUpdatedSrcColumn, StartLoadTimeColumn, EndLoadTimeColumn}
+		defaultColumns              = postgres.ColumnList{OpenInterestColumn, MidpointColumn, IntrinsicValueColumn, MoneynessColumn, RhoColumn}
 	)
 
 	return snapshotsTable{
 		Table: postgres.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
-		Time:                  TimeColumn,
+		Timestamp:             TimestampColumn,
 		Ticker:                TickerColumn,
+		Underlying:            UnderlyingColumn,
 		StrikePrice:           StrikePriceColumn,
-		SharesPerContract:     SharesPerContractColumn,
 		ExpirationDate:        ExpirationDateColumn,
 		OptionType:            OptionTypeColumn,
-		OptionStyle:           OptionStyleColumn,
-		Underlying:            UnderlyingColumn,
+		DataSrc:               DataSrcColumn,
 		UnderlyingPrice:       UnderlyingPriceColumn,
 		UnderlyingLastUpdated: UnderlyingLastUpdatedColumn,
 		OpenInterest:          OpenInterestColumn,
 		Bid:                   BidColumn,
 		Ask:                   AskColumn,
-		Mid:                   MidColumn,
+		Midpoint:              MidpointColumn,
 		BidSize:               BidSizeColumn,
 		AskSize:               AskSizeColumn,
+		IntrinsicValue:        IntrinsicValueColumn,
 		Moneyness:             MoneynessColumn,
 		Delta:                 DeltaColumn,
 		Gamma:                 GammaColumn,

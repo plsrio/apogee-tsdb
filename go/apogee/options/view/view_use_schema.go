@@ -10,6 +10,10 @@ package view
 // UseSchema sets a new schema name for all generated view SQL builder types. It is recommended to invoke
 // this method only once at the beginning of the program.
 func UseSchema(schema string) {
-	SnapshotsOhlc1h = SnapshotsOhlc1h.FromSchema(schema)
 	SnapshotsOhlc30m = SnapshotsOhlc30m.FromSchema(schema)
+	SnapshotsOhlc30mDetailed = SnapshotsOhlc30mDetailed.FromSchema(schema)
+	SnapshotsOhlc60m = SnapshotsOhlc60m.FromSchema(schema)
+	SnapshotsOhlc60mDetailed = SnapshotsOhlc60mDetailed.FromSchema(schema)
+	SnapshotsOhlcDaily = SnapshotsOhlcDaily.FromSchema(schema)
+	SnapshotsOhlcDailyDetailed = SnapshotsOhlcDailyDetailed.FromSchema(schema)
 }

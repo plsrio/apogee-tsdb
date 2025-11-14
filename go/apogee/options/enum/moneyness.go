@@ -9,10 +9,12 @@ package enum
 
 import "github.com/go-jet/jet/v2/postgres"
 
-var OptionType = &struct {
-	C postgres.StringExpression
-	P postgres.StringExpression
+var Moneyness = &struct {
+	I postgres.StringExpression
+	A postgres.StringExpression
+	O postgres.StringExpression
 }{
-	C: postgres.NewEnumValue("C"),
-	P: postgres.NewEnumValue("P"),
+	I: postgres.NewEnumValue("I"),
+	A: postgres.NewEnumValue("A"),
+	O: postgres.NewEnumValue("O"),
 }

@@ -11,9 +11,9 @@ import (
 	"github.com/go-jet/jet/v2/postgres"
 )
 
-var SnapshotsOhlc30m = newSnapshotsOhlc30mTable("options", "snapshots_ohlc_30m", "")
+var SnapshotsOhlcDaily = newSnapshotsOhlcDailyTable("options", "snapshots_ohlc_daily", "")
 
-type snapshotsOhlc30mTable struct {
+type snapshotsOhlcDailyTable struct {
 	postgres.Table
 
 	// Columns
@@ -73,40 +73,40 @@ type snapshotsOhlc30mTable struct {
 	DefaultColumns postgres.ColumnList
 }
 
-type SnapshotsOhlc30mTable struct {
-	snapshotsOhlc30mTable
+type SnapshotsOhlcDailyTable struct {
+	snapshotsOhlcDailyTable
 
-	EXCLUDED snapshotsOhlc30mTable
+	EXCLUDED snapshotsOhlcDailyTable
 }
 
-// AS creates new SnapshotsOhlc30mTable with assigned alias
-func (a SnapshotsOhlc30mTable) AS(alias string) *SnapshotsOhlc30mTable {
-	return newSnapshotsOhlc30mTable(a.SchemaName(), a.TableName(), alias)
+// AS creates new SnapshotsOhlcDailyTable with assigned alias
+func (a SnapshotsOhlcDailyTable) AS(alias string) *SnapshotsOhlcDailyTable {
+	return newSnapshotsOhlcDailyTable(a.SchemaName(), a.TableName(), alias)
 }
 
-// Schema creates new SnapshotsOhlc30mTable with assigned schema name
-func (a SnapshotsOhlc30mTable) FromSchema(schemaName string) *SnapshotsOhlc30mTable {
-	return newSnapshotsOhlc30mTable(schemaName, a.TableName(), a.Alias())
+// Schema creates new SnapshotsOhlcDailyTable with assigned schema name
+func (a SnapshotsOhlcDailyTable) FromSchema(schemaName string) *SnapshotsOhlcDailyTable {
+	return newSnapshotsOhlcDailyTable(schemaName, a.TableName(), a.Alias())
 }
 
-// WithPrefix creates new SnapshotsOhlc30mTable with assigned table prefix
-func (a SnapshotsOhlc30mTable) WithPrefix(prefix string) *SnapshotsOhlc30mTable {
-	return newSnapshotsOhlc30mTable(a.SchemaName(), prefix+a.TableName(), a.TableName())
+// WithPrefix creates new SnapshotsOhlcDailyTable with assigned table prefix
+func (a SnapshotsOhlcDailyTable) WithPrefix(prefix string) *SnapshotsOhlcDailyTable {
+	return newSnapshotsOhlcDailyTable(a.SchemaName(), prefix+a.TableName(), a.TableName())
 }
 
-// WithSuffix creates new SnapshotsOhlc30mTable with assigned table suffix
-func (a SnapshotsOhlc30mTable) WithSuffix(suffix string) *SnapshotsOhlc30mTable {
-	return newSnapshotsOhlc30mTable(a.SchemaName(), a.TableName()+suffix, a.TableName())
+// WithSuffix creates new SnapshotsOhlcDailyTable with assigned table suffix
+func (a SnapshotsOhlcDailyTable) WithSuffix(suffix string) *SnapshotsOhlcDailyTable {
+	return newSnapshotsOhlcDailyTable(a.SchemaName(), a.TableName()+suffix, a.TableName())
 }
 
-func newSnapshotsOhlc30mTable(schemaName, tableName, alias string) *SnapshotsOhlc30mTable {
-	return &SnapshotsOhlc30mTable{
-		snapshotsOhlc30mTable: newSnapshotsOhlc30mTableImpl(schemaName, tableName, alias),
-		EXCLUDED:              newSnapshotsOhlc30mTableImpl("", "excluded", ""),
+func newSnapshotsOhlcDailyTable(schemaName, tableName, alias string) *SnapshotsOhlcDailyTable {
+	return &SnapshotsOhlcDailyTable{
+		snapshotsOhlcDailyTable: newSnapshotsOhlcDailyTableImpl(schemaName, tableName, alias),
+		EXCLUDED:                newSnapshotsOhlcDailyTableImpl("", "excluded", ""),
 	}
 }
 
-func newSnapshotsOhlc30mTableImpl(schemaName, tableName, alias string) snapshotsOhlc30mTable {
+func newSnapshotsOhlcDailyTableImpl(schemaName, tableName, alias string) snapshotsOhlcDailyTable {
 	var (
 		BucketColumn                 = postgres.TimestampzColumn("bucket")
 		TickerColumn                 = postgres.StringColumn("ticker")
@@ -163,7 +163,7 @@ func newSnapshotsOhlc30mTableImpl(schemaName, tableName, alias string) snapshots
 		defaultColumns               = postgres.ColumnList{}
 	)
 
-	return snapshotsOhlc30mTable{
+	return snapshotsOhlcDailyTable{
 		Table: postgres.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns

@@ -11,16 +11,17 @@ import (
 	"github.com/go-jet/jet/v2/postgres"
 )
 
-var SnapshotsOhlc1h = newSnapshotsOhlc1hTable("options", "snapshots_ohlc_1h", "")
+var SnapshotsOhlcDailyDetailed = newSnapshotsOhlcDailyDetailedTable("options", "snapshots_ohlc_daily_detailed", "")
 
-type snapshotsOhlc1hTable struct {
+type snapshotsOhlcDailyDetailedTable struct {
 	postgres.Table
 
 	// Columns
 	Bucket                 postgres.ColumnTimestampz
 	Ticker                 postgres.ColumnString
+	Underlying             postgres.ColumnString
 	StrikePrice            postgres.ColumnFloat
-	ExpirationDate         postgres.ColumnDate
+	ExpirationDate         postgres.ColumnTimestampz
 	OptionType             postgres.ColumnString
 	FirstRecordTime        postgres.ColumnTimestampz
 	LastRecordTime         postgres.ColumnTimestampz
@@ -66,51 +67,54 @@ type snapshotsOhlc1hTable struct {
 	VegaHigh               postgres.ColumnFloat
 	VegaLow                postgres.ColumnFloat
 	VegaClose              postgres.ColumnFloat
+	SharesPerContract      postgres.ColumnInteger
+	ExerciseStyle          postgres.ColumnString
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
 	DefaultColumns postgres.ColumnList
 }
 
-type SnapshotsOhlc1hTable struct {
-	snapshotsOhlc1hTable
+type SnapshotsOhlcDailyDetailedTable struct {
+	snapshotsOhlcDailyDetailedTable
 
-	EXCLUDED snapshotsOhlc1hTable
+	EXCLUDED snapshotsOhlcDailyDetailedTable
 }
 
-// AS creates new SnapshotsOhlc1hTable with assigned alias
-func (a SnapshotsOhlc1hTable) AS(alias string) *SnapshotsOhlc1hTable {
-	return newSnapshotsOhlc1hTable(a.SchemaName(), a.TableName(), alias)
+// AS creates new SnapshotsOhlcDailyDetailedTable with assigned alias
+func (a SnapshotsOhlcDailyDetailedTable) AS(alias string) *SnapshotsOhlcDailyDetailedTable {
+	return newSnapshotsOhlcDailyDetailedTable(a.SchemaName(), a.TableName(), alias)
 }
 
-// Schema creates new SnapshotsOhlc1hTable with assigned schema name
-func (a SnapshotsOhlc1hTable) FromSchema(schemaName string) *SnapshotsOhlc1hTable {
-	return newSnapshotsOhlc1hTable(schemaName, a.TableName(), a.Alias())
+// Schema creates new SnapshotsOhlcDailyDetailedTable with assigned schema name
+func (a SnapshotsOhlcDailyDetailedTable) FromSchema(schemaName string) *SnapshotsOhlcDailyDetailedTable {
+	return newSnapshotsOhlcDailyDetailedTable(schemaName, a.TableName(), a.Alias())
 }
 
-// WithPrefix creates new SnapshotsOhlc1hTable with assigned table prefix
-func (a SnapshotsOhlc1hTable) WithPrefix(prefix string) *SnapshotsOhlc1hTable {
-	return newSnapshotsOhlc1hTable(a.SchemaName(), prefix+a.TableName(), a.TableName())
+// WithPrefix creates new SnapshotsOhlcDailyDetailedTable with assigned table prefix
+func (a SnapshotsOhlcDailyDetailedTable) WithPrefix(prefix string) *SnapshotsOhlcDailyDetailedTable {
+	return newSnapshotsOhlcDailyDetailedTable(a.SchemaName(), prefix+a.TableName(), a.TableName())
 }
 
-// WithSuffix creates new SnapshotsOhlc1hTable with assigned table suffix
-func (a SnapshotsOhlc1hTable) WithSuffix(suffix string) *SnapshotsOhlc1hTable {
-	return newSnapshotsOhlc1hTable(a.SchemaName(), a.TableName()+suffix, a.TableName())
+// WithSuffix creates new SnapshotsOhlcDailyDetailedTable with assigned table suffix
+func (a SnapshotsOhlcDailyDetailedTable) WithSuffix(suffix string) *SnapshotsOhlcDailyDetailedTable {
+	return newSnapshotsOhlcDailyDetailedTable(a.SchemaName(), a.TableName()+suffix, a.TableName())
 }
 
-func newSnapshotsOhlc1hTable(schemaName, tableName, alias string) *SnapshotsOhlc1hTable {
-	return &SnapshotsOhlc1hTable{
-		snapshotsOhlc1hTable: newSnapshotsOhlc1hTableImpl(schemaName, tableName, alias),
-		EXCLUDED:             newSnapshotsOhlc1hTableImpl("", "excluded", ""),
+func newSnapshotsOhlcDailyDetailedTable(schemaName, tableName, alias string) *SnapshotsOhlcDailyDetailedTable {
+	return &SnapshotsOhlcDailyDetailedTable{
+		snapshotsOhlcDailyDetailedTable: newSnapshotsOhlcDailyDetailedTableImpl(schemaName, tableName, alias),
+		EXCLUDED:                        newSnapshotsOhlcDailyDetailedTableImpl("", "excluded", ""),
 	}
 }
 
-func newSnapshotsOhlc1hTableImpl(schemaName, tableName, alias string) snapshotsOhlc1hTable {
+func newSnapshotsOhlcDailyDetailedTableImpl(schemaName, tableName, alias string) snapshotsOhlcDailyDetailedTable {
 	var (
 		BucketColumn                 = postgres.TimestampzColumn("bucket")
 		TickerColumn                 = postgres.StringColumn("ticker")
+		UnderlyingColumn             = postgres.StringColumn("underlying")
 		StrikePriceColumn            = postgres.FloatColumn("strike_price")
-		ExpirationDateColumn         = postgres.DateColumn("expiration_date")
+		ExpirationDateColumn         = postgres.TimestampzColumn("expiration_date")
 		OptionTypeColumn             = postgres.StringColumn("option_type")
 		FirstRecordTimeColumn        = postgres.TimestampzColumn("first_record_time")
 		LastRecordTimeColumn         = postgres.TimestampzColumn("last_record_time")
@@ -156,17 +160,20 @@ func newSnapshotsOhlc1hTableImpl(schemaName, tableName, alias string) snapshotsO
 		VegaHighColumn               = postgres.FloatColumn("vega_high")
 		VegaLowColumn                = postgres.FloatColumn("vega_low")
 		VegaCloseColumn              = postgres.FloatColumn("vega_close")
-		allColumns                   = postgres.ColumnList{BucketColumn, TickerColumn, StrikePriceColumn, ExpirationDateColumn, OptionTypeColumn, FirstRecordTimeColumn, LastRecordTimeColumn, MoneynessOpenColumn, MoneynessCloseColumn, OpenInterestCloseColumn, OpenInterestHighColumn, OpenInterestLowColumn, OpenInterestOpenColumn, ImpliedVolatilityCloseColumn, ImpliedVolatilityHighColumn, ImpliedVolatilityLowColumn, ImpliedVolatilityOpenColumn, UnderlyingOpenColumn, UnderlyingHighColumn, UnderlyingLowColumn, UnderlyingCloseColumn, MidOpenColumn, MidHighColumn, MidLowColumn, MidCloseColumn, BidOpenColumn, BidHighColumn, BidLowColumn, BidCloseColumn, AskOpenColumn, AskHighColumn, AskLowColumn, AskCloseColumn, DeltaOpenColumn, DeltaHighColumn, DeltaLowColumn, DeltaCloseColumn, GammaOpenColumn, GammaHighColumn, GammaLowColumn, GammaCloseColumn, ThetaOpenColumn, ThetaHighColumn, ThetaLowColumn, ThetaCloseColumn, VegaOpenColumn, VegaHighColumn, VegaLowColumn, VegaCloseColumn}
-		mutableColumns               = postgres.ColumnList{BucketColumn, TickerColumn, StrikePriceColumn, ExpirationDateColumn, OptionTypeColumn, FirstRecordTimeColumn, LastRecordTimeColumn, MoneynessOpenColumn, MoneynessCloseColumn, OpenInterestCloseColumn, OpenInterestHighColumn, OpenInterestLowColumn, OpenInterestOpenColumn, ImpliedVolatilityCloseColumn, ImpliedVolatilityHighColumn, ImpliedVolatilityLowColumn, ImpliedVolatilityOpenColumn, UnderlyingOpenColumn, UnderlyingHighColumn, UnderlyingLowColumn, UnderlyingCloseColumn, MidOpenColumn, MidHighColumn, MidLowColumn, MidCloseColumn, BidOpenColumn, BidHighColumn, BidLowColumn, BidCloseColumn, AskOpenColumn, AskHighColumn, AskLowColumn, AskCloseColumn, DeltaOpenColumn, DeltaHighColumn, DeltaLowColumn, DeltaCloseColumn, GammaOpenColumn, GammaHighColumn, GammaLowColumn, GammaCloseColumn, ThetaOpenColumn, ThetaHighColumn, ThetaLowColumn, ThetaCloseColumn, VegaOpenColumn, VegaHighColumn, VegaLowColumn, VegaCloseColumn}
+		SharesPerContractColumn      = postgres.IntegerColumn("shares_per_contract")
+		ExerciseStyleColumn          = postgres.StringColumn("exercise_style")
+		allColumns                   = postgres.ColumnList{BucketColumn, TickerColumn, UnderlyingColumn, StrikePriceColumn, ExpirationDateColumn, OptionTypeColumn, FirstRecordTimeColumn, LastRecordTimeColumn, MoneynessOpenColumn, MoneynessCloseColumn, OpenInterestCloseColumn, OpenInterestHighColumn, OpenInterestLowColumn, OpenInterestOpenColumn, ImpliedVolatilityCloseColumn, ImpliedVolatilityHighColumn, ImpliedVolatilityLowColumn, ImpliedVolatilityOpenColumn, UnderlyingOpenColumn, UnderlyingHighColumn, UnderlyingLowColumn, UnderlyingCloseColumn, MidOpenColumn, MidHighColumn, MidLowColumn, MidCloseColumn, BidOpenColumn, BidHighColumn, BidLowColumn, BidCloseColumn, AskOpenColumn, AskHighColumn, AskLowColumn, AskCloseColumn, DeltaOpenColumn, DeltaHighColumn, DeltaLowColumn, DeltaCloseColumn, GammaOpenColumn, GammaHighColumn, GammaLowColumn, GammaCloseColumn, ThetaOpenColumn, ThetaHighColumn, ThetaLowColumn, ThetaCloseColumn, VegaOpenColumn, VegaHighColumn, VegaLowColumn, VegaCloseColumn, SharesPerContractColumn, ExerciseStyleColumn}
+		mutableColumns               = postgres.ColumnList{BucketColumn, TickerColumn, UnderlyingColumn, StrikePriceColumn, ExpirationDateColumn, OptionTypeColumn, FirstRecordTimeColumn, LastRecordTimeColumn, MoneynessOpenColumn, MoneynessCloseColumn, OpenInterestCloseColumn, OpenInterestHighColumn, OpenInterestLowColumn, OpenInterestOpenColumn, ImpliedVolatilityCloseColumn, ImpliedVolatilityHighColumn, ImpliedVolatilityLowColumn, ImpliedVolatilityOpenColumn, UnderlyingOpenColumn, UnderlyingHighColumn, UnderlyingLowColumn, UnderlyingCloseColumn, MidOpenColumn, MidHighColumn, MidLowColumn, MidCloseColumn, BidOpenColumn, BidHighColumn, BidLowColumn, BidCloseColumn, AskOpenColumn, AskHighColumn, AskLowColumn, AskCloseColumn, DeltaOpenColumn, DeltaHighColumn, DeltaLowColumn, DeltaCloseColumn, GammaOpenColumn, GammaHighColumn, GammaLowColumn, GammaCloseColumn, ThetaOpenColumn, ThetaHighColumn, ThetaLowColumn, ThetaCloseColumn, VegaOpenColumn, VegaHighColumn, VegaLowColumn, VegaCloseColumn, SharesPerContractColumn, ExerciseStyleColumn}
 		defaultColumns               = postgres.ColumnList{}
 	)
 
-	return snapshotsOhlc1hTable{
+	return snapshotsOhlcDailyDetailedTable{
 		Table: postgres.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
 		Bucket:                 BucketColumn,
 		Ticker:                 TickerColumn,
+		Underlying:             UnderlyingColumn,
 		StrikePrice:            StrikePriceColumn,
 		ExpirationDate:         ExpirationDateColumn,
 		OptionType:             OptionTypeColumn,
@@ -214,6 +221,8 @@ func newSnapshotsOhlc1hTableImpl(schemaName, tableName, alias string) snapshotsO
 		VegaHigh:               VegaHighColumn,
 		VegaLow:                VegaLowColumn,
 		VegaClose:              VegaCloseColumn,
+		SharesPerContract:      SharesPerContractColumn,
+		ExerciseStyle:          ExerciseStyleColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

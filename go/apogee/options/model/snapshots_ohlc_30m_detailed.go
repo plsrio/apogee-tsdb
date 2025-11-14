@@ -11,16 +11,17 @@ import (
 	"time"
 )
 
-type SnapshotsOhlc1h struct {
+type SnapshotsOhlc30mDetailed struct {
 	Bucket                 *time.Time
 	Ticker                 *string
+	Underlying             *string
 	StrikePrice            *float64
 	ExpirationDate         *time.Time
 	OptionType             *OptionType
 	FirstRecordTime        *time.Time
 	LastRecordTime         *time.Time
-	MoneynessOpen          *OptionMoneyness
-	MoneynessClose         *OptionMoneyness
+	MoneynessOpen          *Moneyness
+	MoneynessClose         *Moneyness
 	OpenInterestClose      *float64
 	OpenInterestHigh       *float64
 	OpenInterestLow        *float64
@@ -61,4 +62,6 @@ type SnapshotsOhlc1h struct {
 	VegaHigh               *float64
 	VegaLow                *float64
 	VegaClose              *float64
+	SharesPerContract      *int32
+	ExerciseStyle          *ExerciseStyle
 }

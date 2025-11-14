@@ -12,23 +12,23 @@ import (
 )
 
 type Snapshots struct {
-	Time                  time.Time `sql:"primary_key"`
+	Timestamp             time.Time `sql:"primary_key"`
 	Ticker                string    `sql:"primary_key"`
-	StrikePrice           float64   `sql:"primary_key"`
-	SharesPerContract     int32
-	ExpirationDate        time.Time  `sql:"primary_key"`
-	OptionType            OptionType `sql:"primary_key"`
-	OptionStyle           *OptionStyle
 	Underlying            string
+	StrikePrice           float64
+	ExpirationDate        time.Time
+	OptionType            OptionType
+	DataSrc               string
 	UnderlyingPrice       float64
 	UnderlyingLastUpdated *time.Time
-	OpenInterest          *float64
+	OpenInterest          float64
 	Bid                   float64
 	Ask                   float64
-	Mid                   float64
+	Midpoint              *float64
 	BidSize               float64
 	AskSize               float64
-	Moneyness             *OptionMoneyness
+	IntrinsicValue        *float64
+	Moneyness             *Moneyness
 	Delta                 float64
 	Gamma                 float64
 	Theta                 float64

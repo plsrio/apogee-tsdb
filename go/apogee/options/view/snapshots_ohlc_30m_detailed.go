@@ -11,9 +11,9 @@ import (
 	"github.com/go-jet/jet/v2/postgres"
 )
 
-var SnapshotsOhlc30m = newSnapshotsOhlc30mTable("options", "snapshots_ohlc_30m", "")
+var SnapshotsOhlc30mDetailed = newSnapshotsOhlc30mDetailedTable("options", "snapshots_ohlc_30m_detailed", "")
 
-type snapshotsOhlc30mTable struct {
+type snapshotsOhlc30mDetailedTable struct {
 	postgres.Table
 
 	// Columns
@@ -67,46 +67,48 @@ type snapshotsOhlc30mTable struct {
 	VegaHigh               postgres.ColumnFloat
 	VegaLow                postgres.ColumnFloat
 	VegaClose              postgres.ColumnFloat
+	SharesPerContract      postgres.ColumnInteger
+	ExerciseStyle          postgres.ColumnString
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
 	DefaultColumns postgres.ColumnList
 }
 
-type SnapshotsOhlc30mTable struct {
-	snapshotsOhlc30mTable
+type SnapshotsOhlc30mDetailedTable struct {
+	snapshotsOhlc30mDetailedTable
 
-	EXCLUDED snapshotsOhlc30mTable
+	EXCLUDED snapshotsOhlc30mDetailedTable
 }
 
-// AS creates new SnapshotsOhlc30mTable with assigned alias
-func (a SnapshotsOhlc30mTable) AS(alias string) *SnapshotsOhlc30mTable {
-	return newSnapshotsOhlc30mTable(a.SchemaName(), a.TableName(), alias)
+// AS creates new SnapshotsOhlc30mDetailedTable with assigned alias
+func (a SnapshotsOhlc30mDetailedTable) AS(alias string) *SnapshotsOhlc30mDetailedTable {
+	return newSnapshotsOhlc30mDetailedTable(a.SchemaName(), a.TableName(), alias)
 }
 
-// Schema creates new SnapshotsOhlc30mTable with assigned schema name
-func (a SnapshotsOhlc30mTable) FromSchema(schemaName string) *SnapshotsOhlc30mTable {
-	return newSnapshotsOhlc30mTable(schemaName, a.TableName(), a.Alias())
+// Schema creates new SnapshotsOhlc30mDetailedTable with assigned schema name
+func (a SnapshotsOhlc30mDetailedTable) FromSchema(schemaName string) *SnapshotsOhlc30mDetailedTable {
+	return newSnapshotsOhlc30mDetailedTable(schemaName, a.TableName(), a.Alias())
 }
 
-// WithPrefix creates new SnapshotsOhlc30mTable with assigned table prefix
-func (a SnapshotsOhlc30mTable) WithPrefix(prefix string) *SnapshotsOhlc30mTable {
-	return newSnapshotsOhlc30mTable(a.SchemaName(), prefix+a.TableName(), a.TableName())
+// WithPrefix creates new SnapshotsOhlc30mDetailedTable with assigned table prefix
+func (a SnapshotsOhlc30mDetailedTable) WithPrefix(prefix string) *SnapshotsOhlc30mDetailedTable {
+	return newSnapshotsOhlc30mDetailedTable(a.SchemaName(), prefix+a.TableName(), a.TableName())
 }
 
-// WithSuffix creates new SnapshotsOhlc30mTable with assigned table suffix
-func (a SnapshotsOhlc30mTable) WithSuffix(suffix string) *SnapshotsOhlc30mTable {
-	return newSnapshotsOhlc30mTable(a.SchemaName(), a.TableName()+suffix, a.TableName())
+// WithSuffix creates new SnapshotsOhlc30mDetailedTable with assigned table suffix
+func (a SnapshotsOhlc30mDetailedTable) WithSuffix(suffix string) *SnapshotsOhlc30mDetailedTable {
+	return newSnapshotsOhlc30mDetailedTable(a.SchemaName(), a.TableName()+suffix, a.TableName())
 }
 
-func newSnapshotsOhlc30mTable(schemaName, tableName, alias string) *SnapshotsOhlc30mTable {
-	return &SnapshotsOhlc30mTable{
-		snapshotsOhlc30mTable: newSnapshotsOhlc30mTableImpl(schemaName, tableName, alias),
-		EXCLUDED:              newSnapshotsOhlc30mTableImpl("", "excluded", ""),
+func newSnapshotsOhlc30mDetailedTable(schemaName, tableName, alias string) *SnapshotsOhlc30mDetailedTable {
+	return &SnapshotsOhlc30mDetailedTable{
+		snapshotsOhlc30mDetailedTable: newSnapshotsOhlc30mDetailedTableImpl(schemaName, tableName, alias),
+		EXCLUDED:                      newSnapshotsOhlc30mDetailedTableImpl("", "excluded", ""),
 	}
 }
 
-func newSnapshotsOhlc30mTableImpl(schemaName, tableName, alias string) snapshotsOhlc30mTable {
+func newSnapshotsOhlc30mDetailedTableImpl(schemaName, tableName, alias string) snapshotsOhlc30mDetailedTable {
 	var (
 		BucketColumn                 = postgres.TimestampzColumn("bucket")
 		TickerColumn                 = postgres.StringColumn("ticker")
@@ -158,12 +160,14 @@ func newSnapshotsOhlc30mTableImpl(schemaName, tableName, alias string) snapshots
 		VegaHighColumn               = postgres.FloatColumn("vega_high")
 		VegaLowColumn                = postgres.FloatColumn("vega_low")
 		VegaCloseColumn              = postgres.FloatColumn("vega_close")
-		allColumns                   = postgres.ColumnList{BucketColumn, TickerColumn, UnderlyingColumn, StrikePriceColumn, ExpirationDateColumn, OptionTypeColumn, FirstRecordTimeColumn, LastRecordTimeColumn, MoneynessOpenColumn, MoneynessCloseColumn, OpenInterestCloseColumn, OpenInterestHighColumn, OpenInterestLowColumn, OpenInterestOpenColumn, ImpliedVolatilityCloseColumn, ImpliedVolatilityHighColumn, ImpliedVolatilityLowColumn, ImpliedVolatilityOpenColumn, UnderlyingOpenColumn, UnderlyingHighColumn, UnderlyingLowColumn, UnderlyingCloseColumn, MidOpenColumn, MidHighColumn, MidLowColumn, MidCloseColumn, BidOpenColumn, BidHighColumn, BidLowColumn, BidCloseColumn, AskOpenColumn, AskHighColumn, AskLowColumn, AskCloseColumn, DeltaOpenColumn, DeltaHighColumn, DeltaLowColumn, DeltaCloseColumn, GammaOpenColumn, GammaHighColumn, GammaLowColumn, GammaCloseColumn, ThetaOpenColumn, ThetaHighColumn, ThetaLowColumn, ThetaCloseColumn, VegaOpenColumn, VegaHighColumn, VegaLowColumn, VegaCloseColumn}
-		mutableColumns               = postgres.ColumnList{BucketColumn, TickerColumn, UnderlyingColumn, StrikePriceColumn, ExpirationDateColumn, OptionTypeColumn, FirstRecordTimeColumn, LastRecordTimeColumn, MoneynessOpenColumn, MoneynessCloseColumn, OpenInterestCloseColumn, OpenInterestHighColumn, OpenInterestLowColumn, OpenInterestOpenColumn, ImpliedVolatilityCloseColumn, ImpliedVolatilityHighColumn, ImpliedVolatilityLowColumn, ImpliedVolatilityOpenColumn, UnderlyingOpenColumn, UnderlyingHighColumn, UnderlyingLowColumn, UnderlyingCloseColumn, MidOpenColumn, MidHighColumn, MidLowColumn, MidCloseColumn, BidOpenColumn, BidHighColumn, BidLowColumn, BidCloseColumn, AskOpenColumn, AskHighColumn, AskLowColumn, AskCloseColumn, DeltaOpenColumn, DeltaHighColumn, DeltaLowColumn, DeltaCloseColumn, GammaOpenColumn, GammaHighColumn, GammaLowColumn, GammaCloseColumn, ThetaOpenColumn, ThetaHighColumn, ThetaLowColumn, ThetaCloseColumn, VegaOpenColumn, VegaHighColumn, VegaLowColumn, VegaCloseColumn}
+		SharesPerContractColumn      = postgres.IntegerColumn("shares_per_contract")
+		ExerciseStyleColumn          = postgres.StringColumn("exercise_style")
+		allColumns                   = postgres.ColumnList{BucketColumn, TickerColumn, UnderlyingColumn, StrikePriceColumn, ExpirationDateColumn, OptionTypeColumn, FirstRecordTimeColumn, LastRecordTimeColumn, MoneynessOpenColumn, MoneynessCloseColumn, OpenInterestCloseColumn, OpenInterestHighColumn, OpenInterestLowColumn, OpenInterestOpenColumn, ImpliedVolatilityCloseColumn, ImpliedVolatilityHighColumn, ImpliedVolatilityLowColumn, ImpliedVolatilityOpenColumn, UnderlyingOpenColumn, UnderlyingHighColumn, UnderlyingLowColumn, UnderlyingCloseColumn, MidOpenColumn, MidHighColumn, MidLowColumn, MidCloseColumn, BidOpenColumn, BidHighColumn, BidLowColumn, BidCloseColumn, AskOpenColumn, AskHighColumn, AskLowColumn, AskCloseColumn, DeltaOpenColumn, DeltaHighColumn, DeltaLowColumn, DeltaCloseColumn, GammaOpenColumn, GammaHighColumn, GammaLowColumn, GammaCloseColumn, ThetaOpenColumn, ThetaHighColumn, ThetaLowColumn, ThetaCloseColumn, VegaOpenColumn, VegaHighColumn, VegaLowColumn, VegaCloseColumn, SharesPerContractColumn, ExerciseStyleColumn}
+		mutableColumns               = postgres.ColumnList{BucketColumn, TickerColumn, UnderlyingColumn, StrikePriceColumn, ExpirationDateColumn, OptionTypeColumn, FirstRecordTimeColumn, LastRecordTimeColumn, MoneynessOpenColumn, MoneynessCloseColumn, OpenInterestCloseColumn, OpenInterestHighColumn, OpenInterestLowColumn, OpenInterestOpenColumn, ImpliedVolatilityCloseColumn, ImpliedVolatilityHighColumn, ImpliedVolatilityLowColumn, ImpliedVolatilityOpenColumn, UnderlyingOpenColumn, UnderlyingHighColumn, UnderlyingLowColumn, UnderlyingCloseColumn, MidOpenColumn, MidHighColumn, MidLowColumn, MidCloseColumn, BidOpenColumn, BidHighColumn, BidLowColumn, BidCloseColumn, AskOpenColumn, AskHighColumn, AskLowColumn, AskCloseColumn, DeltaOpenColumn, DeltaHighColumn, DeltaLowColumn, DeltaCloseColumn, GammaOpenColumn, GammaHighColumn, GammaLowColumn, GammaCloseColumn, ThetaOpenColumn, ThetaHighColumn, ThetaLowColumn, ThetaCloseColumn, VegaOpenColumn, VegaHighColumn, VegaLowColumn, VegaCloseColumn, SharesPerContractColumn, ExerciseStyleColumn}
 		defaultColumns               = postgres.ColumnList{}
 	)
 
-	return snapshotsOhlc30mTable{
+	return snapshotsOhlc30mDetailedTable{
 		Table: postgres.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
@@ -217,6 +221,8 @@ func newSnapshotsOhlc30mTableImpl(schemaName, tableName, alias string) snapshots
 		VegaHigh:               VegaHighColumn,
 		VegaLow:                VegaLowColumn,
 		VegaClose:              VegaCloseColumn,
+		SharesPerContract:      SharesPerContractColumn,
+		ExerciseStyle:          ExerciseStyleColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

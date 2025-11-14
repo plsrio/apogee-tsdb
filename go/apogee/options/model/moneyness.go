@@ -9,19 +9,21 @@ package model
 
 import "errors"
 
-type OptionStyle string
+type Moneyness string
 
 const (
-	OptionStyle_American OptionStyle = "american"
-	OptionStyle_European OptionStyle = "european"
+	Moneyness_I Moneyness = "I"
+	Moneyness_A Moneyness = "A"
+	Moneyness_O Moneyness = "O"
 )
 
-var OptionStyleAllValues = []OptionStyle{
-	OptionStyle_American,
-	OptionStyle_European,
+var MoneynessAllValues = []Moneyness{
+	Moneyness_I,
+	Moneyness_A,
+	Moneyness_O,
 }
 
-func (e *OptionStyle) Scan(value interface{}) error {
+func (e *Moneyness) Scan(value interface{}) error {
 	var enumValue string
 	switch val := value.(type) {
 	case string:
@@ -33,17 +35,19 @@ func (e *OptionStyle) Scan(value interface{}) error {
 	}
 
 	switch enumValue {
-	case "american":
-		*e = OptionStyle_American
-	case "european":
-		*e = OptionStyle_European
+	case "I":
+		*e = Moneyness_I
+	case "A":
+		*e = Moneyness_A
+	case "O":
+		*e = Moneyness_O
 	default:
-		return errors.New("jet: Invalid scan value '" + enumValue + "' for OptionStyle enum")
+		return errors.New("jet: Invalid scan value '" + enumValue + "' for Moneyness enum")
 	}
 
 	return nil
 }
 
-func (e OptionStyle) String() string {
+func (e Moneyness) String() string {
 	return string(e)
 }

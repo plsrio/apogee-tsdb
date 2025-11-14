@@ -9,10 +9,10 @@ package enum
 
 import "github.com/go-jet/jet/v2/postgres"
 
-var OptionStyle = &struct {
-	American postgres.StringExpression
-	European postgres.StringExpression
+var ExerciseStyle = &struct {
+	A postgres.StringExpression
+	E postgres.StringExpression
 }{
-	American: postgres.NewEnumValue("american"),
-	European: postgres.NewEnumValue("european"),
+	A: postgres.NewEnumValue("A"),
+	E: postgres.NewEnumValue("E"),
 }

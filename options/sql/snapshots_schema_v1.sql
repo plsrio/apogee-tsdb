@@ -3,42 +3,89 @@ CREATE EXTENSION IF NOT EXISTS timescaledb;
 
 CREATE SCHEMA IF NOT EXISTS options;
 
--- Create enum types for option attributes
-CREATE TYPE options.option_type AS ENUM ('call', 'put');
-CREATE TYPE options.option_style AS ENUM ('american', 'european');
--- CREATE TYPE options.option_exercise AS ENUM ('long', 'short');
--- CREATE TYPE options.option_position AS ENUM ('buy', 'sell');
-CREATE TYPE options.option_moneyness AS ENUM ('ITM', 'ATM', 'OTM');
+-- Define ENUM types
+-- Option type ENUM: Call (C), Put (P)
+CREATE TYPE options.option_type AS ENUM ('C', 'P');
+-- Exercise style ENUM: American (A), European (E)
+CREATE TYPE options.exercise_style AS ENUM ('A', 'E');
+-- Moneyness ENUM: In the Money (I), At the Money (A), Out of the Money (O)
+CREATE TYPE options.moneyness AS ENUM ('I', 'A', 'O');
 
--- Main options snapshots table
-CREATE TABLE options.snapshots (
-  -- rounded timestamp for partitioning
-  time TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+-- option contracts table
+-- stores static information about each option contract
+CREATE TABLE options.contracts (
   ticker TEXT NOT NULL,
+  expiration_date TIMESTAMP WITH TIME ZONE NOT NULL,
+  created_timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  underlying TEXT NOT NULL,
   strike_price DECIMAL(12, 4) NOT NULL,
   shares_per_contract INTEGER NOT NULL,
-  expiration_date DATE NOT NULL,
   option_type options.option_type NOT NULL,
-  option_style options.option_style DEFAULT 'american',
-  -- Underlying info
+  exercise_style options.exercise_style DEFAULT 'A',
+  PRIMARY KEY (ticker, expiration_date)
+) WITH (
+  timescaledb.hypertable,
+  timescaledb.partition_column = 'expiration_date',
+  timescaledb.orderby = 'expiration_date DESC',
+  timescaledb.segmentby = 'option_type, underlying',
+  timescaledb.compress
+);
+
+SELECT set_chunk_time_interval('options.contracts', INTERVAL '30 days');
+SELECT add_compression_policy('options.contracts', INTERVAL '90 days');
+
+-- option contracts indexes
+CREATE INDEX IF NOT EXISTS idx_option_contracts_ticker ON options.contracts (ticker DESC);
+CREATE INDEX IF NOT EXISTS idx_option_contracts_underlying_expiration ON options.contracts (underlying, expiration_date DESC);
+
+-- options snapshots hypertable
+-- Stores time-series data for option contracts
+CREATE TABLE options.snapshots (
+  timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
+  ticker TEXT NOT NULL,
   underlying TEXT NOT NULL,
+  strike_price DECIMAL(12, 4) NOT NULL,
+  expiration_date TIMESTAMP WITH TIME ZONE NOT NULL,
+  option_type options.option_type NOT NULL,
+  data_src TEXT NOT NULL,
   underlying_price DECIMAL(12, 4) NOT NULL,
   underlying_last_updated TIMESTAMP WITH TIME ZONE DEFAULT NULL,
   -- open interest
-  open_interest DECIMAL(12, 4),
+  open_interest DECIMAL(12, 4) DEFAULT 0 NOT NULL,
   -- Bid/Ask
   bid DECIMAL(12, 4) NOT NULL,
   ask DECIMAL(12, 4) NOT NULL,
-  mid DECIMAL(12, 4) NOT NULL,
+  midpoint DECIMAL(12, 4) GENERATED ALWAYS AS ((bid + ask) / 2) STORED,
   bid_size DECIMAL(12, 4) NOT NULL,
   ask_size DECIMAL(12, 4) NOT NULL,
+  -- intrinsic value
+  intrinsic_value DECIMAL(12, 4) GENERATED ALWAYS AS (
+    CASE
+      WHEN option_type = 'C' THEN (underlying_price - strike_price)
+      ELSE (strike_price - underlying_price)
+    END
+  ) STORED,
   -- moneyness
-  moneyness options.option_moneyness DEFAULT NULL,
+  moneyness options.moneyness GENERATED ALWAYS AS (
+    CASE
+      WHEN option_type = 'C' THEN CASE
+        WHEN underlying_price > strike_price THEN options.moneyness('I')
+        WHEN underlying_price = strike_price THEN options.moneyness('A')
+        ELSE options.moneyness('O')
+      END
+      ELSE CASE
+        WHEN underlying_price < strike_price THEN options.moneyness('I')
+        WHEN underlying_price = strike_price THEN options.moneyness('A')
+        ELSE options.moneyness('O')
+      END
+    END
+  ) STORED,
   -- Greeks
   delta DECIMAL(10, 6) NOT NULL,
   gamma DECIMAL(10, 6) NOT NULL,
   theta DECIMAL(10, 6) NOT NULL,
   vega DECIMAL(10, 6) NOT NULL,
+  -- Rho is not always available
   rho DECIMAL(10, 6) DEFAULT NULL,
   -- Implied volatility
   implied_volatility DECIMAL(10, 6),
@@ -46,138 +93,90 @@ CREATE TABLE options.snapshots (
   last_updated_src TIMESTAMP WITH TIME ZONE DEFAULT NULL,
   start_load_time TIMESTAMP WITH TIME ZONE,
   end_load_time TIMESTAMP WITH TIME ZONE,
-  PRIMARY KEY (
-    time,
-    ticker,
-    strike_price,
-    expiration_date,
-    option_type
-  )
+  PRIMARY KEY (timestamp, ticker)
+) WITH (
+  timescaledb.hypertable,
+  timescaledb.partition_column = 'timestamp',
+  timescaledb.orderby = 'timestamp DESC',
+  timescaledb.segmentby = 'expiration_date',
+  timescaledb.compress
 );
 
--- Convert to hypertable (partitioned by time)
-SELECT create_hypertable(
-    'options.snapshots',
-    'time',
-    chunk_time_interval => INTERVAL '1 day',
-    if_not_exists => TRUE
-  );
-
--- Create indexes for efficient querying
-CREATE INDEX IF NOT EXISTS idx_option_ticker_time ON option_snapshots (ticker, time DESC);
-CREATE INDEX IF NOT EXISTS idx_option_udr ON option_snapshots (underlying, time DESC);
-CREATE INDEX IF NOT EXISTS idx_option_udr_exp ON option_snapshots (underlying, expiration_date, time DESC);
-CREATE INDEX IF NOT EXISTS idx_option_exp ON option_snapshots (expiration_date, time DESC);
-CREATE INDEX IF NOT EXISTS idx_option_stk ON option_snapshots (strike_price, time DESC);
-CREATE INDEX IF NOT EXISTS idx_option_type ON option_snapshots (option_type, ticker, time DESC);
-
--- Composite index for common queries
-CREATE INDEX IF NOT EXISTS idx_option_ticker_exp_stk ON option_snapshots (ticker, expiration_date, strike_price, time DESC);
-
--- Enable compression after 7 days
-ALTER TABLE options.snapshots
-SET (
-    timescaledb.compress,
-    timescaledb.compress_segmentby = 'ticker, strike_price, expiration_date, option_type',
-    timescaledb.compress_orderby = 'time DESC'
-  );
-
+SELECT set_chunk_time_interval('options.snapshots', INTERVAL '1 day');
 SELECT add_compression_policy('options.snapshots', INTERVAL '7 days');
 
+CREATE INDEX IF NOT EXISTS idx_option_snapshots_underlying ON options.snapshots (underlying, timestamp DESC);
 
--- Create enriched view with calculated fields
-CREATE VIEW options.snapshots_enriched AS
-SELECT *,
-  (bid + ask) / 2 AS mid,
-  (ask - bid) AS spread,
-  (end_load_time - start_load_time) AS load_time,
-  CASE
-    WHEN option_type = 'call' THEN (underlying_price - strike_price)
-    ELSE (strike_price - underlying_price)
-  END AS intrinsic_value,
-  CASE
-    WHEN option_type = 'call' THEN CASE
-      WHEN underlying_price > strike_price THEN 'ITM'
-      WHEN underlying_price = strike_price THEN 'ATM'
-      ELSE 'OTM'
-    END
-    ELSE CASE
-      WHEN underlying_price < strike_price THEN 'ITM'
-      WHEN underlying_price = strike_price THEN 'ATM'
-      ELSE 'OTM'
-    END
-  END AS moneyness
-FROM option_snapshots
-GROUP BY time,
-  ticker,
-  strike_price,
-  expiration_date,
-  option_type;
-
+--
+-- Create OHLC aggregates
+--
+-- 30-minute OHLC aggregates
 CREATE MATERIALIZED VIEW options.snapshots_ohlc_30m WITH (timescaledb.continuous) AS
-SELECT time_bucket('30 minutes', time) AS bucket,
-  ticker,
-  strike_price,
-  expiration_date,
-  option_type,
-  MIN(time) AS first_record_time,
-  MAX(time) AS last_record_time,
+SELECT time_bucket('30 minutes', s.timestamp) AS bucket,
+  s.ticker AS ticker,
+  s.underlying AS underlying,
+  s.strike_price AS strike_price,
+  s.expiration_date AS expiration_date,
+  s.option_type AS option_type,
+  MIN(s.timestamp) AS first_record_time,
+  MAX(s.timestamp) AS last_record_time,
   -- moneyness open / close
-  FIRST(moneyness, time) AS moneyness_open,
-  LAST(moneyness, time) AS moneyness_close,
+  FIRST(s.moneyness, s.timestamp) AS moneyness_open,
+  LAST(s.moneyness, s.timestamp) AS moneyness_close,
   -- open interest
-  LAST(open_interest, time) AS open_interest_close,
-  MAX(open_interest) AS open_interest_high,
-  MIN(open_interest) AS open_interest_low,
-  FIRST(open_interest, time) AS open_interest_open,
+  LAST(s.open_interest, s.timestamp) AS open_interest_close,
+  MAX(s.open_interest) AS open_interest_high,
+  MIN(s.open_interest) AS open_interest_low,
+  FIRST(s.open_interest, s.timestamp) AS open_interest_open,
   -- implied volatility
-  LAST(implied_volatility, time) AS implied_volatility_close,
-  MAX(implied_volatility) AS implied_volatility_high,
-  MIN(implied_volatility) AS implied_volatility_low,
-  FIRST(implied_volatility, time) AS implied_volatility_open,
+  LAST(s.implied_volatility, s.timestamp) AS implied_volatility_close,
+  MAX(s.implied_volatility) AS implied_volatility_high,
+  MIN(s.implied_volatility) AS implied_volatility_low,
+  FIRST(s.implied_volatility, s.timestamp) AS implied_volatility_open,
   -- underlying OHLC
-  FIRST(underlying_price, time) AS underlying_open,
-  MAX(underlying_price) AS underlying_high,
-  MIN(underlying_price) AS underlying_low,
-  LAST(underlying_price, time) AS underlying_close,
-  -- mid ohlc
-  FIRST(mid, time) AS mid_open,
-  MAX(mid) AS mid_high,
-  MIN(mid) AS mid_low,
-  LAST(mid, time) AS mid_close,
+  FIRST(s.underlying_price, s.timestamp) AS underlying_open,
+  MAX(s.underlying_price) AS underlying_high,
+  MIN(s.underlying_price) AS underlying_low,
+  LAST(s.underlying_price, s.timestamp) AS underlying_close,
+  -- midpoint OHLC
+  FIRST(s.midpoint, s.timestamp) AS mid_open,
+  MAX(s.midpoint) AS mid_high,
+  MIN(s.midpoint) AS mid_low,
+  LAST(s.midpoint, s.timestamp) AS mid_close,
   -- bid OHLC
-  FIRST(bid, time) AS bid_open,
-  MAX(bid) AS bid_high,
-  MIN(bid) AS bid_low,
-  LAST(bid, time) AS bid_close,
+  FIRST(s.bid, s.timestamp) AS bid_open,
+  MAX(s.bid) AS bid_high,
+  MIN(s.bid) AS bid_low,
+  LAST(bid, s.timestamp) AS bid_close,
   -- ask OHLC
-  FIRST(ask, time) AS ask_open,
-  MAX(ask) AS ask_high,
-  MIN(ask) AS ask_low,
-  LAST(ask, time) AS ask_close,
+  FIRST(s.ask, s.timestamp) AS ask_open,
+  MAX(s.ask) AS ask_high,
+  MIN(s.ask) AS ask_low,
+  LAST(ask, s.timestamp) AS ask_close,
   -- delta OHLC
-  FIRST(delta, time) AS delta_open,
-  MAX(delta) AS delta_high,
-  MIN(delta) AS delta_low,
-  LAST(delta, time) AS delta_close,
+  FIRST(s.delta, s.timestamp) AS delta_open,
+  MAX(s.delta) AS delta_high,
+  MIN(s.delta) AS delta_low,
+  LAST(s.delta, s.timestamp) AS delta_close,
   -- gamma OHLC
-  FIRST(gamma, time) AS gamma_open,
-  MAX(gamma) AS gamma_high,
-  MIN(gamma) AS gamma_low,
-  LAST(gamma, time) AS gamma_close,
+  FIRST(s.gamma, s.timestamp) AS gamma_open,
+  MAX(s.gamma) AS gamma_high,
+  MIN(s.gamma) AS gamma_low,
+  LAST(s.gamma, s.timestamp) AS gamma_close,
   -- theta OHLC
-  FIRST(theta, time) AS theta_open,
-  MAX(theta) AS theta_high,
-  MIN(theta) AS theta_low,
-  LAST(theta, time) AS theta_close,
+  FIRST(s.theta, s.timestamp) AS theta_open,
+  MAX(s.theta) AS theta_high,
+  MIN(s.theta) AS theta_low,
+  LAST(s.theta, s.timestamp) AS theta_close,
   -- vega OHLC
-  FIRST(vega, time) AS vega_open,
-  MAX(vega) AS vega_high,
-  MIN(vega) AS vega_low,
-  LAST(vega, time) AS vega_close
-FROM options.snapshots
+  FIRST(s.vega, s.timestamp) AS vega_open,
+  MAX(s.vega) AS vega_high,
+  MIN(s.vega) AS vega_low,
+  LAST(s.vega, s.timestamp) AS vega_close
+FROM options.snapshots s
 GROUP BY bucket,
   ticker,
+  underlying,
   strike_price,
   expiration_date,
   option_type;
@@ -189,78 +188,203 @@ SELECT add_continuous_aggregate_policy(
     schedule_interval => INTERVAL '30 minutes'
   );
 
--- Create 1-hour OHLC aggregates
-CREATE MATERIALIZED VIEW options.snapshots_ohlc_1h WITH (timescaledb.continuous) AS
-SELECT time_bucket('1 hour', time) AS bucket,
-  ticker,
-  strike_price,
-  expiration_date,
-  option_type,
-  MIN(time) AS first_record_time,
-  MAX(time) AS last_record_time,
+ALTER MATERIALIZED VIEW options.snapshots_ohlc_30m
+SET (timescaledb.enable_columnstore = TRUE);
+
+CALL add_columnstore_policy(
+  'options.snapshots_ohlc_30m',
+  AFTER => INTERVAL '90 days'
+);
+
+CREATE VIEW options.snapshots_ohlc_30m_detailed AS
+SELECT o.*,
+  d.shares_per_contract,
+  d.exercise_style
+FROM options.snapshots_ohlc_30m o
+  JOIN options.contracts d ON o.ticker = d.ticker;
+
+-- 60-minute OHLC aggregate
+CREATE MATERIALIZED VIEW options.snapshots_ohlc_60m WITH (timescaledb.continuous) AS
+SELECT time_bucket('60 minutes', s.timestamp) AS bucket,
+  s.ticker AS ticker,
+  s.underlying AS underlying,
+  s.strike_price AS strike_price,
+  s.expiration_date AS expiration_date,
+  s.option_type AS option_type,
+  MIN(s.timestamp) AS first_record_time,
+  MAX(s.timestamp) AS last_record_time,
   -- moneyness open / close
-  FIRST(moneyness, time) AS moneyness_open,
-  LAST(moneyness, time) AS moneyness_close,
+  FIRST(s.moneyness, s.timestamp) AS moneyness_open,
+  LAST(s.moneyness, s.timestamp) AS moneyness_close,
   -- open interest
-  LAST(open_interest, time) AS open_interest_close,
-  MAX(open_interest) AS open_interest_high,
-  MIN(open_interest) AS open_interest_low,
-  FIRST(open_interest, time) AS open_interest_open,
+  LAST(s.open_interest, s.timestamp) AS open_interest_close,
+  MAX(s.open_interest) AS open_interest_high,
+  MIN(s.open_interest) AS open_interest_low,
+  FIRST(s.open_interest, s.timestamp) AS open_interest_open,
   -- implied volatility
-  LAST(implied_volatility, time) AS implied_volatility_close,
-  MAX(implied_volatility) AS implied_volatility_high,
-  MIN(implied_volatility) AS implied_volatility_low,
-  FIRST(implied_volatility, time) AS implied_volatility_open,
+  LAST(s.implied_volatility, s.timestamp) AS implied_volatility_close,
+  MAX(s.implied_volatility) AS implied_volatility_high,
+  MIN(s.implied_volatility) AS implied_volatility_low,
+  FIRST(s.implied_volatility, s.timestamp) AS implied_volatility_open,
   -- underlying OHLC
-  FIRST(underlying_price, time) AS underlying_open,
-  MAX(underlying_price) AS underlying_high,
-  MIN(underlying_price) AS underlying_low,
-  LAST(underlying_price, time) AS underlying_close,
-  -- mid ohlc
-  FIRST(mid, time) AS mid_open,
-  MAX(mid) AS mid_high,
-  MIN(mid) AS mid_low,
-  LAST(mid, time) AS mid_close,
+  FIRST(s.underlying_price, s.timestamp) AS underlying_open,
+  MAX(s.underlying_price) AS underlying_high,
+  MIN(s.underlying_price) AS underlying_low,
+  LAST(s.underlying_price, s.timestamp) AS underlying_close,
+  -- midpoint OHLC
+  FIRST(s.midpoint, s.timestamp) AS mid_open,
+  MAX(s.midpoint) AS mid_high,
+  MIN(s.midpoint) AS mid_low,
+  LAST(s.midpoint, s.timestamp) AS mid_close,
   -- bid OHLC
-  FIRST(bid, time) AS bid_open,
-  MAX(bid) AS bid_high,
-  MIN(bid) AS bid_low,
-  LAST(bid, time) AS bid_close,
+  FIRST(s.bid, s.timestamp) AS bid_open,
+  MAX(s.bid) AS bid_high,
+  MIN(s.bid) AS bid_low,
+  LAST(bid, s.timestamp) AS bid_close,
   -- ask OHLC
-  FIRST(ask, time) AS ask_open,
-  MAX(ask) AS ask_high,
-  MIN(ask) AS ask_low,
-  LAST(ask, time) AS ask_close,
-  -- delta OHLC  FIRST(delta, time) AS delta_open,
-  FIRST(delta, time) AS delta_open,
-  MAX(delta) AS delta_high,
-  MIN(delta) AS delta_low,
-  LAST(delta, time) AS delta_close,
+  FIRST(s.ask, s.timestamp) AS ask_open,
+  MAX(s.ask) AS ask_high,
+  MIN(s.ask) AS ask_low,
+  LAST(ask, s.timestamp) AS ask_close,
+  -- delta OHLC
+  FIRST(s.delta, s.timestamp) AS delta_open,
+  MAX(s.delta) AS delta_high,
+  MIN(s.delta) AS delta_low,
+  LAST(s.delta, s.timestamp) AS delta_close,
   -- gamma OHLC
-  FIRST(gamma, time) AS gamma_open,
-  MAX(gamma) AS gamma_high,
-  MIN(gamma) AS gamma_low,
-  LAST(gamma, time) AS gamma_close,
+  FIRST(s.gamma, s.timestamp) AS gamma_open,
+  MAX(s.gamma) AS gamma_high,
+  MIN(s.gamma) AS gamma_low,
+  LAST(s.gamma, s.timestamp) AS gamma_close,
   -- theta OHLC
-  FIRST(theta, time) AS theta_open,
-  MAX(theta) AS theta_high,
-  MIN(theta) AS theta_low,
-  LAST(theta, time) AS theta_close,
+  FIRST(s.theta, s.timestamp) AS theta_open,
+  MAX(s.theta) AS theta_high,
+  MIN(s.theta) AS theta_low,
+  LAST(s.theta, s.timestamp) AS theta_close,
   -- vega OHLC
-  FIRST(vega, time) AS vega_open,
-  MAX(vega) AS vega_high,
-  MIN(vega) AS vega_low,
-  LAST(vega, time) AS vega_close
-FROM options.snapshots
+  FIRST(s.vega, s.timestamp) AS vega_open,
+  MAX(s.vega) AS vega_high,
+  MIN(s.vega) AS vega_low,
+  LAST(s.vega, s.timestamp) AS vega_close
+FROM options.snapshots s
 GROUP BY bucket,
   ticker,
+  underlying,
   strike_price,
   expiration_date,
   option_type;
 
 SELECT add_continuous_aggregate_policy(
-    'options.snapshots_ohlc_1h',
-    start_offset => INTERVAL '12 hours',
-    end_offset => INTERVAL '1 hour',
-    schedule_interval => INTERVAL '1 hour'
+    'options.snapshots_ohlc_60m',
+    start_offset => INTERVAL '12 hour',
+    end_offset => INTERVAL '60 minutes',
+    schedule_interval => INTERVAL '60 minutes'
   );
+
+ALTER MATERIALIZED VIEW options.snapshots_ohlc_60m
+SET (timescaledb.enable_columnstore = TRUE);
+
+CALL add_columnstore_policy(
+  'options.snapshots_ohlc_60m',
+  AFTER => INTERVAL '180 days'
+);
+
+CREATE VIEW options.snapshots_ohlc_60m_detailed AS
+SELECT o.*,
+  d.shares_per_contract,
+  d.exercise_style
+FROM options.snapshots_ohlc_60m o
+  JOIN options.contracts d ON o.ticker = d.ticker;
+
+-- daily aggregate
+CREATE MATERIALIZED VIEW options.snapshots_ohlc_daily WITH (timescaledb.continuous) AS
+SELECT time_bucket('1 day', s.timestamp) AS bucket,
+  s.ticker AS ticker,
+  s.underlying AS underlying,
+  s.strike_price AS strike_price,
+  s.expiration_date AS expiration_date,
+  s.option_type AS option_type,
+  MIN(s.timestamp) AS first_record_time,
+  MAX(s.timestamp) AS last_record_time,
+  -- moneyness open / close
+  FIRST(s.moneyness, s.timestamp) AS moneyness_open,
+  LAST(s.moneyness, s.timestamp) AS moneyness_close,
+  -- open interest
+  LAST(s.open_interest, s.timestamp) AS open_interest_close,
+  MAX(s.open_interest) AS open_interest_high,
+  MIN(s.open_interest) AS open_interest_low,
+  FIRST(s.open_interest, s.timestamp) AS open_interest_open,
+  -- implied volatility
+  LAST(s.implied_volatility, s.timestamp) AS implied_volatility_close,
+  MAX(s.implied_volatility) AS implied_volatility_high,
+  MIN(s.implied_volatility) AS implied_volatility_low,
+  FIRST(s.implied_volatility, s.timestamp) AS implied_volatility_open,
+  -- underlying OHLC
+  FIRST(s.underlying_price, s.timestamp) AS underlying_open,
+  MAX(s.underlying_price) AS underlying_high,
+  MIN(s.underlying_price) AS underlying_low,
+  LAST(s.underlying_price, s.timestamp) AS underlying_close,
+  -- midpoint OHLC
+  FIRST(s.midpoint, s.timestamp) AS mid_open,
+  MAX(s.midpoint) AS mid_high,
+  MIN(s.midpoint) AS mid_low,
+  LAST(s.midpoint, s.timestamp) AS mid_close,
+  -- bid OHLC
+  FIRST(s.bid, s.timestamp) AS bid_open,
+  MAX(s.bid) AS bid_high,
+  MIN(s.bid) AS bid_low,
+  LAST(bid, s.timestamp) AS bid_close,
+  -- ask OHLC
+  FIRST(s.ask, s.timestamp) AS ask_open,
+  MAX(s.ask) AS ask_high,
+  MIN(s.ask) AS ask_low,
+  LAST(ask, s.timestamp) AS ask_close,
+  -- delta OHLC
+  FIRST(s.delta, s.timestamp) AS delta_open,
+  MAX(s.delta) AS delta_high,
+  MIN(s.delta) AS delta_low,
+  LAST(s.delta, s.timestamp) AS delta_close,
+  -- gamma OHLC
+  FIRST(s.gamma, s.timestamp) AS gamma_open,
+  MAX(s.gamma) AS gamma_high,
+  MIN(s.gamma) AS gamma_low,
+  LAST(s.gamma, s.timestamp) AS gamma_close,
+  -- theta OHLC
+  FIRST(s.theta, s.timestamp) AS theta_open,
+  MAX(s.theta) AS theta_high,
+  MIN(s.theta) AS theta_low,
+  LAST(s.theta, s.timestamp) AS theta_close,
+  -- vega OHLC
+  FIRST(s.vega, s.timestamp) AS vega_open,
+  MAX(s.vega) AS vega_high,
+  MIN(s.vega) AS vega_low,
+  LAST(s.vega, s.timestamp) AS vega_close
+FROM options.snapshots s
+GROUP BY bucket,
+  ticker,
+  underlying,
+  strike_price,
+  expiration_date,
+  option_type;
+
+SELECT add_continuous_aggregate_policy(
+    'options.snapshots_ohlc_daily',
+    start_offset => INTERVAL '3 days',
+    end_offset => INTERVAL '1 day',
+    schedule_interval => INTERVAL '30 day'
+  );
+
+ALTER MATERIALIZED VIEW options.snapshots_ohlc_daily
+SET (timescaledb.enable_columnstore = TRUE);
+
+CALL add_columnstore_policy(
+  'options.snapshots_ohlc_daily',
+  AFTER => INTERVAL '1 year'
+);
+
+CREATE VIEW options.snapshots_ohlc_daily_detailed AS
+SELECT o.*,
+  d.shares_per_contract,
+  d.exercise_style
+FROM options.snapshots_ohlc_daily o
+  JOIN options.contracts d ON o.ticker = d.ticker;

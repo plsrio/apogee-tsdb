@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-type SnapshotsOhlc30m struct {
+type SnapshotsOhlcDaily struct {
 	Bucket                 *time.Time
 	Ticker                 *string
 	Underlying             *string
